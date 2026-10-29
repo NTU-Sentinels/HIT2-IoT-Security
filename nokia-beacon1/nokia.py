@@ -99,3 +99,5 @@ if __name__ == '__main__':
         print('last=', n.last[0], n.last[2] if isinstance(n.last[2], dict) else n.last[2])
     else:
         print('last= (no response)')
+
+
