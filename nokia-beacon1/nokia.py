@@ -4,6 +4,7 @@ import base64, hashlib, json, os, random, sys, urllib.parse, urllib.request, htt
 BASE = "http://192.168.18.1"
 USER = "admin"
 PASS = "9bp53dJ3fv"
+FALLBACK_PASS = "B6uHuZGSVZ"
 
 def b64(b): return base64.b64encode(b).decode()
 def b64url_escape(s):
@@ -22,6 +23,7 @@ class Nokia:
         self.sid = None
         self.token = None
         self.last = None
+        self.tries = 0
 
     def _do(self, req):
         try:
@@ -40,11 +42,27 @@ class Nokia:
         req.add_header('Content-Type', ctype)
         return self._do(req)
 
-    def login(self):
+    def login_any(self, candidates=None):
+        """Try each candidate password in turn; the first that works wins."""
+        for i, pw in enumerate(candidates or (PASS, FALLBACK_PASS), 1):
+            self.tries = i
+            self.cj.clear()               # a rejected attempt's cookies are useless
+            self.sid = self.token = None
+            try:
+                if self.login(pw):
+                    return True
+            except (urllib.error.URLError, OSError, ValueError, KeyError) as exc:
+                # No point trying the other password if the device is absent.
+                sys.stderr.write('[nokia] cannot reach %s: %s\n' % (BASE, exc))
+                return False
+            sys.stderr.write('[nokia] password #%d rejected\n' % i)
+        return False
+
+    def login(self, password=PASS):
         st, hd, body = self.get('/login_web_app.cgi?nonce')
         j = json.loads(body)
         nonce, rk = j['nonce'], j['randomKey']
-        l = sha_b64(USER + ":" + PASS)
+        l = sha_b64(USER + ":" + password)
         resp = sha_url(l, nonce)
         userhash = sha_url(USER, nonce)
         rkhash = sha_url(rk, nonce)
@@ -73,7 +91,11 @@ class Nokia:
 
 if __name__ == '__main__':
     n = Nokia()
-    ok = n.login()
-    print('login ok=', ok)
+    # argv passwords override the built-in pair, e.g. ./nokia.py hunter2
+    ok = n.login_any(sys.argv[1:] or None)
+    print('login ok= True (password #%d)' % n.tries if ok else 'login ok= False')
     print('cookies=', n.cookies())
-    print('last=', n.last[0], n.last[2] if isinstance(n.last[2], dict) else n.last[2])
+    if n.last:
+        print('last=', n.last[0], n.last[2] if isinstance(n.last[2], dict) else n.last[2])
+    else:
+        print('last= (no response)')
